@@ -36,14 +36,14 @@ app = Flask(__name__)
 def welcome():
     """List all available api routes."""
     return (
-        f" Available Routes:<br/>"
+        f"Available Routes:<br/>"
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
     )
 
 ## Exploratory Climate Analysis
-@app.route("/api/v1.0/precipitation<br/>")
+@app.route("/api/v1.0/precipitation")
 # Convert the query results to a Dictionary using date as the key and prcp as the value.
 def precipitation():
     latest_date = dt.date(2017, 8, 23) 
