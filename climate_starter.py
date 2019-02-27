@@ -36,7 +36,7 @@ app = Flask(__name__)
 def welcome():
     """List all available api routes."""
     return (
-        f"Available Routes:<br/>"
+        f"<br> Available Routes:<br/>"
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
@@ -52,95 +52,77 @@ def precipitation():
     one_yr_prcp_data = session.query(Measurement.date, Measurement.prcp).\
     filter(Measurement.date >= delta).all()
     #loop through and add date and prcp to 2 different lists to create a dataframe
-    count = 0
     one_yr_date = []
     one_yr_prcp = []
 
     for row in one_yr_prcp_data:
-        count = count + 1
         one_yr_date.append(row.date)
         one_yr_prcp.append(row.prcp)
 
-    ## double checking everything worked
-    # print(str(len(one_yr_date)), ",", str(len(one_yr_prcp)), ",", count)  
-    
     # creating a dictionary with the 2 lists  
-    one_yr_dict = {"date": one_yr_date, "precipitation": one_yr_prcp}  
-    prcp_df = pd.DataFrame(one_yr_dict)
-    #setting the index to the date
-    prcp_df.set_index(prcp_df['date'], inplace=True) 
-    #sorting by the date
-    prcp_df = prcp_df.sort_values("date")  
-    return jsonify(prcp_df)
+    one_yr_dict = {"date": one_yr_date, "precipitation": one_yr_prcp}   
+    return jsonify(one_yr_dict)
 
 
+#************STATION DATA***************
 
-# #************STATION DATA***************
+@app.route("/api/v1.0/stations")
+def stations():
+    # Design a query to show how many stations are available in this dataset?
+    station_data = session.query(Station.station).distinct().all()
+    station_count = session.query(Station.station).distinct().count()
 
-# @app.route("/api/v1.0/stations")
-# def stations():
-#     # Design a query to show how many stations are available in this dataset?
-#     station_data = session.query(Station.station).distinct().all()
-#     station_count = session.query(Station.station).distinct().count()
-
-#     # List the stations and the counts in descending order.
-#     station_counts_desc = session.query(Measurement.station,func.\
-#         count(Measurement.station).\
-#         label("scount")).\
-#         group_by(Measurement.station).\
-#         order_by(desc("scount")).\
-#         all()
-#     station_counts_desc  #jasonify this!
-
-
-# # ********** Temperature Observations (tobs) **************
+    # List the stations and the counts in descending order.
+    station_counts_desc = session.query(Measurement.station,func.\
+        count(Measurement.station).\
+        label("scount")).\
+        group_by(Measurement.station).\
+        order_by(desc("scount")).\
+        all()
+    return jsonify(stations=station_data) 
 
 
-#     #Station with the most records(most active)
-#     (station_max , count_max) = station_counts_desc[0]
+# ********** Temperature Observations (tobs) **************
 
-#     # lowest & highest temperature recorded, and average temperature @ most active station
-#     station_temp_stats = session.query(func.min(Measurement.tobs),func.\
-#         max(Measurement.tobs),func.avg(Measurement.tobs)).\
-#         filter(Measurement.station == station_max).\
-#         all()
-#     station_temp_stats
+@app.route("/api/v1.0/tobs")
+def tobs():
+    latest_date = dt.date(2017, 8, 23) 
+    delta = latest_date - dt.timedelta(days=365)
 
-#     # For station with the highest number of temperature observations... 
-#     # ... count of only the tobs (temperature observations)
-#     station_tobs_counts = session.query(Measurement.station,func.\
-#         count(Measurement.tobs).\
-#         label("count_tobs")).\
-#         filter(Measurement.date > delta).\
-#         group_by(Measurement.station).\
-#         order_by(desc("count_tobs")).all()
+    #Station with the most records(most active)
+    # (station_max, count_max) = station_counts_desc[0]
 
-#     #because it is in desc order the station at index 0 has the most tobs
-#     (tobs_station_max , tobs_count_max) = station_tobs_counts[0] 
-#     print(tobs_station_max,tobs_count_max)
+    # lowest & highest temperature recorded, and average temperature @ most active station
+    # station_temp_stats = session.query(func.min(Measurement.tobs),func.\
+    #     max(Measurement.tobs),func.avg(Measurement.tobs)).\
+    #     filter(Measurement.station == station_max).\
+    #     all()
+    # station_temp_stats
 
+    # For station with the highest number of temperature observations... 
+    # ... count of only the tobs (temperature observations)
+    station_tobs_counts = session.query(Measurement.station,func.count(Measurement.tobs).\
+        label("count_tobs")).\
+        filter(Measurement.date > delta).\
+        group_by(Measurement.station).\
+        order_by(desc("count_tobs")).all()
 
-#     station_temps = session.query(Measurement.tobs).\
-#         filter(Measurement.date > delta).\
-#         filter(Measurement.station ==  tobs_station_max).\
-#         all()
+    #because it is in desc order the station at index 0 has the most tobs
+    (tobs_station_max , tobs_count_max) = station_tobs_counts[0] 
 
-#     tobs_list = []
-#     count = 0
+    station_temps = session.query(Measurement.tobs).filter(Measurement.date > delta).\
+        filter(Measurement.station ==  tobs_station_max).\
+        all()
 
-#     for row in station_temps:
-#         count = count + 1
-#         tobs_list.append(row)
+    tobs_list = []
 
-#     print(count)
-#     tobs_list = [float(str(i)[1:-2]) for i in tobs_list]
-#     tobs_list
+    for row in station_temps:
+        tobs_list.append(row)
 
-#     #put the data into a df
-#     tobs_dict = {"Temperature" : tobs_list}
-#     tobs_df = pd.DataFrame(tobs_dict)
-#     tobs_df.head()
-
+    print(count)
+    tobs_list = [float(str(i)[1:-2]) for i in tobs_list]
+    tobs_dict = {"Temperature" : tobs_list}
+    return jasonify(tobs_dict)
 
 
 # runs the apps (in debug mode)
